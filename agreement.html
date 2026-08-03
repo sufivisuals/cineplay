@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Service Agreement - SufiVisuals & Arshmeet Singh</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      font-size: 9.5pt;
+      line-height: 1.38;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #0f172a;
+      margin-bottom: 10px;
+    }
+
+    .brand-title {
+      font-size: 16pt;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      color: #0f172a;
+    }
+
+    .doc-subtitle {
+      font-size: 8.5pt;
+      font-weight: 500;
+      color: #64748b;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    .meta-badge {
+      text-align: right;
+      font-size: 8pt;
+      color: #475569;
+    }
+
+    .meta-badge strong {
+      color: #0f172a;
+    }
+
+    /* PARTIES GRID */
+    .parties-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .party-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 8px 10px;
+    }
+
+    .party-label {
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 3px;
+    }
+
+    .party-name {
+      font-size: 10.5pt;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .party-detail {
+      font-size: 8pt;
+      color: #475569;
+    }
+
+    /* SECTION STYLES */
+    .section {
+      margin-bottom: 9px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 2px;
+      margin-bottom: 5px;
+    }
+
+    .section-num {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 7.5pt;
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-weight: 600;
+    }
+
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 7px 9px;
+    }
+
+    /* LISTS & TEXT */
+    p {
+      margin-bottom: 4px;
+      color: #334155;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    .scope-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .tag {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-size: 7.5pt;
+      font-weight: 500;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .price-callout {
+      background: #f8fafc;
+      border-left: 3px solid #0f172a;
+      padding: 6px 8px;
+      margin-top: 4px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .price-val {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    ul.bullet-list {
+      padding-left: 14px;
+      margin-top: 3px;
+      margin-bottom: 3px;
+    }
+
+    ul.bullet-list li {
+      margin-bottom: 2px;
+      color: #334155;
+    }
+
+    /* SIGNATURES */
+    .signatures-container {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1.5px dashed #cbd5e1;
+    }
+
+    .signatures-title {
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .sig-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 8px 10px;
+      background: #fafafa;
+    }
+
+    .sig-role {
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+    }
+
+    .sig-name {
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+
+    .sig-line {
+      border-bottom: 1px solid #94a3b8;
+      height: 22px;
+      margin-bottom: 4px;
+      position: relative;
+    }
+
+    .sig-line-label {
+      font-size: 7pt;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="brand-title">Service Agreement</div>
+      <div class="doc-subtitle">Video Editing & Production Services</div>
+    </div>
+    <div class="meta-badge">
+      <div><strong>Effective Date:</strong> Immediately</div>
+      <div><strong>Valid Until:</strong> 31 January 2027</div>
+    </div>
+  </div>
+
+  <!-- PARTIES -->
+  <div class="parties-grid">
+    <div class="party-card">
+      <div class="party-label">Editor</div>
+      <div class="party-name">Sufiyan</div>
+      <div class="party-detail">SufiVisuals</div>
+    </div>
+    <div class="party-card">
+      <div class="party-label">Client</div>
+      <div class="party-name">Arshmeet Singh</div>
+      <div class="party-detail">Client Partner</div>
+    </div>
+  </div>
+
+  <!-- 1. SCOPE & DELIVERABLES -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">01</span> Scope of Work & Deliverables
+    </div>
+    <div class="grid-2col">
+      <div class="card">
+        <p><strong>Primary Work:</strong> Documentary-style YouTube video editing.</p>
+        <p><strong>Schedule & Length:</strong> Approx. 1 video/week (based on schedule); avg. duration 10–20 mins.</p>
+        <p style="margin-top: 4px; font-weight: 600; font-size: 8pt; color: #475569; text-transform: uppercase; letter-spacing: 0.03em;">Included Editing Scope:</p>
+        <div class="scope-tags">
+          <span class="tag">Storytelling & Pacing</span>
+          <span class="tag">Motion Graphics</span>
+          <span class="tag">Maps & Route Animations</span>
+          <span class="tag">B-Roll Integration</span>
+          <span class="tag">AI Visuals</span>
+          <span class="tag">Text Animations</span>
+          <span class="tag">Sound Design</span>
+          <span class="tag">Basic Color Correction</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <p><strong>Deliverables:</strong></p>
+        <ul class="bullet-list">
+          <li>Final exported video file in <strong>4K / 1080p</strong> resolution as required.</li>
+          <li>Raw project files are <em>not included</em> unless mutually agreed separately.</li>
+        </ul>
+        <div class="price-callout">
+          <div style="font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 600;">Pricing per Video</div>
+          <div class="price-val">₹9,000 <span style="font-size: 8pt; font-weight: 400; color: #475569;">/ completed video</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. REVISIONS & SCOPE ADJUSTMENTS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">02</span> Workflow, Revisions & Scope Adjustments
+    </div>
+    <div class="grid-2col">
+      <div class="card">
+        <p><strong>Client Responsibilities:</strong></p>
+        <ul class="bullet-list">
+          <li>Provide script, voice-over, raw footage, branding assets, and reference material before editing begins.</li>
+          <li>Provide consolidated feedback for revision rounds.</li>
+        </ul>
+        <p><strong>Turnaround Time:</strong> Mutually agreed for each video based on complexity.</p>
+      </div>
+
+      <div class="card">
+        <p><strong>Revisions:</strong> Up to <strong>2 revision rounds</strong> per video. Additional revisions or scope alterations may incur extra charges.</p>
+        <p style="margin-top: 4px;"><strong>Scope Changes:</strong> If a video requires work significantly beyond documentary editing (e.g., extensive VFX, 3D animation, advanced motion design, extra research), pricing will be agreed separately before work begins.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. PAYMENT & LEGAL TERMS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">03</span> Payment, Termination & Legal Terms
+    </div>
+    <div class="grid-2col">
+      <div class="card">
+        <p><strong>Payment Terms:</strong> Payment is due immediately upon delivery of each completed video unless agreed otherwise. Applicable taxes or transaction fees are the client's responsibility.</p>
+        <p style="margin-top: 4px;"><strong>Termination:</strong> Either party may terminate this agreement with <strong>7 days' written notice</strong>. All completed work must be paid for prior to termination.</p>
+      </div>
+
+      <div class="card">
+        <p><strong>Confidentiality:</strong> Both parties agree to keep all confidential files, business info, project materials, and unpublished content private.</p>
+        <p style="margin-top: 4px;"><strong>Ownership:</strong> Full video ownership transfers to Client upon receipt of full payment. The Editor retains rights to display work in their portfolio unless requested confidential in writing.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNATURES -->
+  <div class="signatures-container">
+    <div class="signatures-title">Authorization & Execution</div>
+    <div class="sig-grid">
+      <div class="sig-box">
+        <div class="sig-role">Editor</div>
+        <div class="sig-name">Sufiyan (SufiVisuals)</div>
+        <div class="sig-line"></div>
+        <div class="sig-line-label">
+          <span>Authorized Signature</span>
+          <span>Date</span>
+        </div>
+      </div>
+
+      <div class="sig-box">
+        <div class="sig-role">Client</div>
+        <div class="sig-name">Arshmeet Singh</div>
+        <div class="sig-line"></div>
+        <div class="sig-line-label">
+          <span>Authorized Signature</span>
+          <span>Date</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

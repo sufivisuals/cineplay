@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum TranscodeStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model User {
+  id           String            @id @default(uuid())
+  email        String            @unique
+  passwordHash String
+  fullName     String
+  avatarUrl    String?
+  memberships  WorkspaceMember[]
+  comments     Comment[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model Workspace {
+  id        String            @id @default(uuid())
+  name      String
+  slug      String            @unique
+  members   WorkspaceMember[]
+  projects  Project[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        Role      @default(MEMBER)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Project {
+  id          String    @id @default(uuid())
+  workspaceId String
+  name        String
+  description String?
+  assets      Asset[]
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Asset {
+  id              String          @id @default(uuid())
+  projectId       String
+  name            String
+  fileKey         String
+  fileSize        BigInt
+  mimeType        String
+  fps             Float           @default(24.0)
+  durationSec     Float?
+  versionGroup    String
+  versionNumber   Int             @default(1)
+  
+  transcodeStatus TranscodeStatus @default(PENDING)
+  proxyKey        String?
+  hlsMasterKey    String?
+  spriteSheetKey  String?
+  waveformKey     String?
+
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  comments        Comment[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Comment {
+  id                 String   @id @default(uuid())
+  assetId            String
+  authorId           String?
+  authorName         String?
+  frameNumber        Int
+  timeSeconds        Float
+  timecodeFormatted  String
+  text               String
+  drawingJson        Json?
+  resolved           Boolean  @default(false)
+  parentId           String?
+
+  asset              Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  author             User?    @relation(fields: [authorId], references: [id])
+  parent             Comment? @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies            Comment[] @relation("Replies")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
