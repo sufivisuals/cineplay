@@ -19,7 +19,7 @@ commentRouter.get('/asset/:assetId', (req: Request, res: Response): void => {
  */
 commentRouter.post('/asset/:assetId', (req: Request, res: Response): void => {
   const { assetId } = req.params;
-  const { frameNumber, timeSeconds, timecodeFormatted, text, drawingJson, authorName = 'Anonymous Reviewer' } = req.body;
+  const { frameNumber, timeSeconds, timecodeFormatted, text, drawingJson, authorName = 'Guest Reviewer' } = req.body;
 
   const newComment = {
     id: `comment_${Date.now()}`,
@@ -64,9 +64,18 @@ commentRouter.patch('/:commentId/resolve', (req: Request, res: Response): void =
 });
 
 /**
- * Delete a comment.
+ * Delete a comment with Guest permission security check.
  */
 commentRouter.delete('/:commentId', (req: Request, res: Response): void => {
+  const isGuest = req.headers['x-guest-mode'] === '1';
+  if (isGuest) {
+    res.status(403).json({
+      error: 'Forbidden',
+      message: '🔒 Guest Review Links are strictly restricted to view and comment operations.',
+    });
+    return;
+  }
+
   const { commentId } = req.params;
 
   for (const [assetId, list] of memoryCommentStore.entries()) {

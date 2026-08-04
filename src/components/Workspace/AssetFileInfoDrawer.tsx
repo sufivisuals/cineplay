@@ -1,12 +1,14 @@
 import React from 'react';
 import type { MediaAsset, AssetStatus } from '../../utils/sampleAssets';
-import { X, Film, Layers, HardDrive, Tag } from 'lucide-react';
+import { PRESET_USERS } from '../../types/auth';
+import { X, Film, Layers, HardDrive, Tag, UserCheck } from 'lucide-react';
 
 interface AssetFileInfoDrawerProps {
   asset: MediaAsset;
   commentCount: number;
   onClose: () => void;
   onUpdateStatus?: (assetId: string, status: AssetStatus) => void;
+  onAssignClient?: (assetId: string, clientEmail: string) => void;
 }
 
 export const AssetFileInfoDrawer: React.FC<AssetFileInfoDrawerProps> = ({
@@ -14,8 +16,12 @@ export const AssetFileInfoDrawer: React.FC<AssetFileInfoDrawerProps> = ({
   commentCount,
   onClose,
   onUpdateStatus,
+  onAssignClient,
 }) => {
   const currentStatus: AssetStatus = asset.status || 'needs_review';
+  const assignedClient = asset.assignedClient || 'all';
+
+  const clientsList = PRESET_USERS.filter((u) => u.role === 'client');
 
   return (
     <div className="file-info-drawer-overlay" onClick={onClose}>
@@ -62,6 +68,30 @@ export const AssetFileInfoDrawer: React.FC<AssetFileInfoDrawerProps> = ({
             </select>
           </div>
 
+          {/* Client Privacy & Assignment */}
+          <div className="drawer-section">
+            <h5 className="section-heading">
+              <UserCheck className="sec-ic" /> Client Access Assignment
+            </h5>
+            <select
+              className="drawer-status-select"
+              style={{ borderColor: 'var(--accent-purple)', color: 'var(--accent-cyan)' }}
+              value={assignedClient}
+              onChange={(e) => {
+                if (onAssignClient) {
+                  onAssignClient(asset.id, e.target.value);
+                }
+              }}
+            >
+              <option value="all">🌐 All Clients & Everyone</option>
+              {clientsList.map((c) => (
+                <option key={c.email} value={c.email}>
+                  🔒 Restricted to: {c.name} ({c.email})
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Technical Metadata */}
           <div className="drawer-section">
             <h5 className="section-heading">
@@ -69,45 +99,22 @@ export const AssetFileInfoDrawer: React.FC<AssetFileInfoDrawerProps> = ({
             </h5>
             <div className="meta-grid-table">
               <div className="meta-row">
-                <span className="meta-key">Container / Codec</span>
-                <span className="meta-val">H.264 / AAC (MP4)</span>
+                <span className="meta-key">Timebase FPS:</span>
+                <span className="meta-val highlight">{asset.fps} fps</span>
               </div>
               <div className="meta-row">
-                <span className="meta-key">Resolution</span>
-                <span className="meta-val">1920 × 1080 (1080p)</span>
+                <span className="meta-key">Frame Count:</span>
+                <span className="meta-val">{Math.round(asset.duration * asset.fps)} frames</span>
               </div>
               <div className="meta-row">
-                <span className="meta-key">Timebase / FPS</span>
-                <span className="meta-val">{asset.fps} fps</span>
+                <span className="meta-key">Comment Notes:</span>
+                <span className="meta-val">
+                  <Layers className="row-ic" /> {commentCount} annotations
+                </span>
               </div>
               <div className="meta-row">
-                <span className="meta-key">Estimated Duration</span>
-                <span className="meta-val">{Math.floor(asset.duration)} seconds</span>
-              </div>
-              <div className="meta-row">
-                <span className="meta-key">Storage Source</span>
-                <span className="meta-val">{asset.isCustom ? 'Local User File' : 'S3 / MinIO Storage'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Collaboration Activity */}
-          <div className="drawer-section">
-            <h5 className="section-heading">
-              <Layers className="sec-ic" /> Review Activity
-            </h5>
-            <div className="meta-grid-table">
-              <div className="meta-row">
-                <span className="meta-key">Timecoded Notes</span>
-                <span className="meta-val highlight">{commentCount} Notes Posted</span>
-              </div>
-              <div className="meta-row">
-                <span className="meta-key">Uploader</span>
-                <span className="meta-val">Alex Producer</span>
-              </div>
-              <div className="meta-row">
-                <span className="meta-key">Security Status</span>
-                <span className="meta-val success">Passcode & Watermark Ready</span>
+                <span className="meta-key">Source Type:</span>
+                <span className="meta-val">{asset.isCustom ? 'Local Upload' : 'Cloud Master'}</span>
               </div>
             </div>
           </div>

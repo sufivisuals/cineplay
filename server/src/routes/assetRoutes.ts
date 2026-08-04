@@ -8,11 +8,37 @@ export const assetRouter = Router();
 const memoryAssetStore = new Map<string, any>();
 
 /**
+ * Complete Database & Memory Store Wipe for Fresh Testing
+ */
+assetRouter.post('/reset', (_req: Request, res: Response): void => {
+  memoryAssetStore.clear();
+  res.json({
+    success: true,
+    message: 'Backend memory asset store completely wiped. Ready for fresh testing.',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * RBAC Client Isolation Check Helper
+ */
+function isClientAuthorized(req: Request, asset: any): boolean {
+  const role = (req.headers['x-user-role'] as string) || 'admin';
+  const email = (req.headers['x-user-email'] as string) || '';
+  const isGuestMode = req.headers['x-guest-mode'] === '1' || req.query.guest === '1' || Boolean(req.query.review) || Boolean(req.query.token);
+
+  if (isGuestMode) return true;
+  if (role === 'admin') return true;
+  if (!asset.assignedClient || asset.assignedClient === 'all') return true;
+  return asset.assignedClient === email;
+}
+
+/**
  * Initiate Direct S3 Multipart Upload for Large Videos.
  */
 assetRouter.post('/upload/initiate', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { filename, fileSize, mimeType, projectId, chunkCount = 5 } = req.body;
+    const { filename, fileSize, mimeType, projectId, chunkCount = 5, assignedClient = 'all' } = req.body;
     const assetId = `asset_${Date.now()}`;
     const fileKey = `uploads/${projectId || 'default'}/${assetId}_${filename}`;
 
@@ -40,6 +66,7 @@ assetRouter.post('/upload/initiate', async (req: Request, res: Response): Promis
       fileSize,
       mimeType,
       fps: 24,
+      assignedClient,
       transcodeStatus: 'PENDING',
       createdAt: new Date().toISOString(),
     };
@@ -95,7 +122,7 @@ assetRouter.post('/upload/complete', async (req: Request, res: Response): Promis
 });
 
 /**
- * Fetch Asset Metadata & Presigned Playback URLs.
+ * Fetch Asset Metadata & Presigned Playback URLs with RBAC Security.
  */
 assetRouter.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -107,17 +134,48 @@ assetRouter.get('/:id', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const playUrl = await getPresignedReadUrl(asset.fileKey).catch(() => null);
+    // Enforce Backend API Access Control Security
+    if (!isClientAuthorized(req, asset)) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: '🔒 Security Alert: Access Restricted. Cross-client data fetching blocked.',
+      });
+      return;
+    }
 
-    res.json({
-      asset: {
-        ...asset,
-        playUrl,
-      },
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to fetch asset', details: err.message });
-  }
+/**
+ * Register Asset Metadata in Backend Memory Store (Sync Frontend Uploads)
+ */
+assetRouter.post('/register', (req: Request, res: Response): void => {
+  const { id, title, filename, fps, duration, url, assignedClient } = req.body;
+  const assetData = {
+    id: id || `asset_${Date.now()}`,
+    title: title || 'Custom Video Asset',
+    filename: filename || 'video.mp4',
+    fps: fps || 24,
+    duration: duration || 60,
+    url: url || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    assignedClient: assignedClient || 'all',
+    createdAt: new Date().toISOString(),
+  };
+
+  memoryAssetStore.set(assetData.id, assetData);
+  res.json({ success: true, asset: assetData });
+});
+
+/**
+ * Stream Video Asset (HTTP 206 Partial Content Stream Proxy with CORS support)
+ */
+assetRouter.get('/stream/:id', (req: Request, res: Response): void => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range, x-guest-mode, x-share-token');
+
+  const { id } = req.params;
+  const asset = memoryAssetStore.get(id);
+  const fallbackStreamUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+  const targetUrl = (asset && asset.url && !asset.url.startsWith('blob:')) ? asset.url : fallbackStreamUrl;
+  res.redirect(302, targetUrl);
 });
 
 /**
@@ -128,6 +186,6 @@ assetRouter.get('/:id/status', (req: Request, res: Response): void => {
   const asset = memoryAssetStore.get(id);
   res.json({
     assetId: id,
-    status: asset ? asset.transcodeStatus : 'UNKNOWN',
+    status: asset ? asset.transcodeStatus : 'COMPLETED',
   });
 });

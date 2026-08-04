@@ -17,9 +17,9 @@ import {
 } from 'lucide-react';
 
 interface AssetGridProps {
-  project: Project;
+  project: Project | null;
   assets: MediaAsset[];
-  activeAsset: MediaAsset;
+  activeAsset: MediaAsset | null;
   onSelectAsset: (asset: MediaAsset) => void;
   onOpenComparePlayer: (v1Asset: MediaAsset, v2Asset: MediaAsset) => void;
   onStackNewVersion: (asset: MediaAsset) => void;
@@ -235,7 +235,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
       {/* Top Action Header */}
       <div className="grid-header-bar">
         <div className="project-title-meta">
-          <h2>{isTrashView ? '🗑️ Recycle Bin (Trash)' : project.name}</h2>
+          <h2>{isTrashView ? '🗑️ Recycle Bin (Trash)' : project ? project.name : 'Untitled Project'}</h2>
           <span className="project-subtitle">
             {isTrashView
               ? `${filteredAssets.length} Soft-deleted Video Asset${filteredAssets.length !== 1 ? 's' : ''}`
@@ -338,27 +338,52 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
       </div>
 
       {/* Main Asset Grid View */}
-      <div className={`assets-layout ${viewMode}`}>
-        {filteredAssets.map((asset, idx) => {
-          const isSelected = activeAsset.id === asset.id;
-          const versionNumber = idx === 0 ? 3 : idx === 1 ? 2 : 1;
+      {filteredAssets.length === 0 ? (
+        <div className="empty-assets-container" style={{ textAlign: 'center', padding: '4.5rem 2rem', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', borderRadius: '12px', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+            <FileVideo style={{ width: '32px', height: '32px', color: 'var(--accent-cyan)' }} />
+          </div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+            {isTrashView ? 'Recycle Bin is Empty' : 'Add your first file'}
+          </h3>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: '420px', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+            {isTrashView
+              ? 'Soft-deleted assets will appear here before permanent deletion.'
+              : 'This project is currently empty. Upload a video file or drop media anywhere to start reviewing.'}
+          </p>
+          {!isTrashView && (
+            <button
+              onClick={onUploadClick}
+              style={{ background: 'linear-gradient(135deg, var(--accent-cyan) 0%, #0284c7 100%)', color: '#ffffff', border: 'none', padding: '0.65rem 1.4rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 14px rgba(56, 189, 248, 0.3)' }}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              <span>Add Your 1st File</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className={`assets-layout ${viewMode}`}>
+          {filteredAssets.map((asset, idx) => {
+            const isSelected = Boolean(activeAsset && activeAsset.id === asset.id);
+            const versionNumber = idx === 0 ? 3 : idx === 1 ? 2 : 1;
 
-          return (
-            <AssetCardItem
-              key={asset.id}
-              asset={asset}
-              versionNumber={versionNumber}
-              isSelected={isSelected}
-              isFirst={idx === 0}
-              onSelectAsset={onSelectAsset}
-              onStackNewVersion={onStackNewVersion}
-              onOpenComparePlayer={() => onOpenComparePlayer(assets[0], asset)}
-              onUpdateAssetStatus={onUpdateAssetStatus}
-              onRightClickCard={onRightClickCard}
-            />
-          );
-        })}
-      </div>
+            return (
+              <AssetCardItem
+                key={asset.id}
+                asset={asset}
+                versionNumber={versionNumber}
+                isSelected={isSelected}
+                isFirst={idx === 0}
+                onSelectAsset={onSelectAsset}
+                onStackNewVersion={onStackNewVersion}
+                onOpenComparePlayer={() => onOpenComparePlayer(assets[0], asset)}
+                onUpdateAssetStatus={onUpdateAssetStatus}
+                onRightClickCard={onRightClickCard}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

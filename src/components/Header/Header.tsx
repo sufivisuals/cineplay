@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
 import type { MediaAsset } from '../../utils/sampleAssets';
 import type { FrameRate } from '../../types/timecode';
-import { Film, Upload, Clock, CheckCircle2, Share2, ChevronRight, Layers } from 'lucide-react';
+import { PRESET_USERS, type UserProfile } from '../../types/auth';
+import { Film, Upload, Clock, CheckCircle2, Share2, ChevronRight, Layers, ShieldCheck, UserCheck } from 'lucide-react';
 import { ShareModal } from '../Sharing/ShareModal';
 
 interface HeaderProps {
-  currentAsset: MediaAsset;
+  currentAsset: MediaAsset | null;
   assets: MediaAsset[];
   onSelectAsset: (asset: MediaAsset) => void;
   onUploadCustomVideo: (file: File) => void;
@@ -16,6 +17,9 @@ interface HeaderProps {
   projectName?: string;
   onNavigateGrid?: () => void;
   onOpenShareModal?: (asset: MediaAsset) => void;
+  currentUser: UserProfile;
+  onChangeUser: (user: UserProfile) => void;
+  isGuestReviewMode?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,6 +34,9 @@ export const Header: React.FC<HeaderProps> = ({
   projectName = 'Commercial Reel 2026',
   onNavigateGrid,
   onOpenShareModal,
+  currentUser,
+  onChangeUser,
+  isGuestReviewMode = false,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLocalShareOpen, setIsLocalShareOpen] = useState(false);
@@ -42,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const handleShareClick = () => {
+    if (!currentAsset) return;
     if (onOpenShareModal) {
       onOpenShareModal(currentAsset);
     } else {
@@ -73,40 +81,54 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="bc-item asset-version-picker">
             <select
               className="header-asset-select"
-              value={currentAsset.id}
+              value={currentAsset ? currentAsset.id : ''}
               onChange={(e) => {
                 const selected = assets.find((a) => a.id === e.target.value);
                 if (selected) onSelectAsset(selected);
               }}
             >
-              {assets.map((asset, idx) => {
-                const verTag = `V${assets.length - idx}`;
-                return (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.title} ({verTag}) {asset.isCustom ? '[Local]' : ''}
-                  </option>
-                );
-              })}
+              {assets.length === 0 ? (
+                <option value="">No Videos Uploaded</option>
+              ) : (
+                assets.map((asset, idx) => {
+                  const verTag = `V${assets.length - idx}`;
+                  return (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.title} ({verTag}) {asset.isCustom ? '[Local]' : ''}
+                    </option>
+                  );
+                })
+              )}
             </select>
           </div>
         </nav>
       </div>
 
       <div className="header-meta">
-        {/* Active Presence Avatars */}
-        <div className="presence-avatar-stack" title="2 Active Reviewers Viewing Asset">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-            alt="Alex Producer"
-            className="presence-avatar"
-          />
-          <img
-            src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80"
-            alt="Sarah Connor"
-            className="presence-avatar avatar-offset"
-          />
-          <span className="presence-pulse-dot" />
-        </div>
+        {/* Role & Client Isolation Switcher (Hidden in Guest Review Mode for Privacy) */}
+        {!isGuestReviewMode && (
+          <div className="user-role-switcher" title="Simulate Client View / RBAC Permissions">
+            {currentUser.role === 'admin' ? (
+              <ShieldCheck className="role-icon admin" />
+            ) : (
+              <UserCheck className="role-icon client" />
+            )}
+            <select
+              className={`role-select ${currentUser.role}`}
+              value={currentUser.id}
+              onChange={(e) => {
+                const u = PRESET_USERS.find((p) => p.id === e.target.value);
+                if (u) onChangeUser(u);
+              }}
+            >
+              {PRESET_USERS.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.role === 'admin' ? '👑 Admin (Owner)' : `👤 Client: ${u.name.split(' ')[0]}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="fps-selector">
           <Clock className="meta-icon" />
@@ -147,14 +169,16 @@ export const Header: React.FC<HeaderProps> = ({
           <span>Share</span>
         </button>
 
-        <button
-          className="btn-upload"
-          onClick={() => fileInputRef.current?.click()}
-          title="Upload local video file from your disk"
-        >
-          <Upload className="btn-icon" />
-          <span>Upload Video</span>
-        </button>
+        {currentUser.role === 'admin' && (
+          <button
+            className="btn-upload"
+            onClick={() => fileInputRef.current?.click()}
+            title="Upload local video file from your disk"
+          >
+            <Upload className="btn-icon" />
+            <span>Upload Video</span>
+          </button>
+        )}
 
         <input
           ref={fileInputRef}
@@ -164,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
           style={{ display: 'none' }}
         />
 
-        {isLocalShareOpen && (
+        {isLocalShareOpen && currentAsset && (
           <ShareModal asset={currentAsset} onClose={() => setIsLocalShareOpen(false)} />
         )}
       </div>

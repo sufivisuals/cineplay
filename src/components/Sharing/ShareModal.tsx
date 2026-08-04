@@ -22,7 +22,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ asset, onClose, onUpdate
   const [enableWatermark, setEnableWatermark] = useState(true);
   const [expiration, setExpiration] = useState('7d');
 
-  const shareUrl = `${window.location.origin}/?review=${asset.id}&passcode=${passcode}&watermark=${enableWatermark ? '1' : '0'}`;
+  const shareUrl = `${window.location.origin}/?review=${asset.id}&guest=1&passcode=${passcode}&watermark=${enableWatermark ? '1' : '0'}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl);

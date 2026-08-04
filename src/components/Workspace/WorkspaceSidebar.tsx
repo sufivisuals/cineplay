@@ -5,10 +5,11 @@ import { Folder, Film, Plus, ChevronRight, ChevronDown, LayoutGrid, Users, Setti
 interface WorkspaceSidebarProps {
   workspaces: Workspace[];
   activeWorkspace: Workspace;
-  onSelectWorkspace: (workspace: Workspace) => void;
-  activeProject: Project;
-  onSelectProject: (project: Project) => void;
+  onSelectWorkspace: (ws: Workspace) => void;
+  activeProject: Project | null;
+  onSelectProject: (proj: Project) => void;
   onNewProject: () => void;
+  onDeleteProject?: (projectId: string) => void;
   trashCount?: number;
   onOpenTrash?: () => void;
   onNavigateDashboard?: () => void;
@@ -22,6 +23,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   activeProject,
   onSelectProject,
   onNewProject,
+  onDeleteProject,
   trashCount = 0,
   onOpenTrash,
   onNavigateDashboard,
@@ -111,23 +113,49 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
         {isProjectsOpen && (
           <div className="projects-list">
-            {activeWorkspace.projects.map((project) => (
-              <button
-                key={project.id}
-                className={`project-item ${activeProject.id === project.id && currentAppMode !== 'trash' ? 'active' : ''}`}
-                onClick={() => onSelectProject(project)}
-              >
-                <Film className="project-icon" />
-                <span className="project-name">{project.name}</span>
-                <span className="asset-count">{project.assetIds.length}</span>
-              </button>
-            ))}
+            {activeWorkspace.projects.length === 0 ? (
+              <div className="empty-projects-notice" style={{ padding: '0.75rem 0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                No projects yet. Click + to create one.
+              </div>
+            ) : (
+              activeWorkspace.projects.map((project) => (
+                <div
+                  key={project.id}
+                  className={`project-item ${activeProject && activeProject.id === project.id && currentAppMode !== 'trash' ? 'active' : ''}`}
+                  onClick={() => onSelectProject(project)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flex: 1 }}>
+                    <Film className="project-icon" />
+                    <span className="project-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span className="asset-count">{project.assetIds ? project.assetIds.length : 0}</span>
+                    {onDeleteProject && (
+                      <button
+                        className="btn-delete-project-action"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Are you sure you want to delete project "${project.name}"?`)) {
+                            onDeleteProject(project.id);
+                          }
+                        }}
+                        title={`Delete project "${project.name}"`}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Trash2 style={{ width: '13px', height: '13px', color: 'var(--accent-rose)' }} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
 
       {/* Folders Navigation */}
-      {activeProject.folders.length > 0 && (
+      {activeProject && activeProject.folders && activeProject.folders.length > 0 && (
         <div className="sidebar-section">
           <div className="section-header" onClick={() => setIsFoldersOpen(!isFoldersOpen)}>
             <div className="section-title-wrap">

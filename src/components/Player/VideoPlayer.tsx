@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { MediaAsset } from '../../utils/sampleAssets';
+import { saveStoredAsset } from '../../utils/storage';
 import type { FrameRate } from '../../types/timecode';
 import { secondsToTimecode, frameToSeconds } from '../../utils/timecode';
 import type { ToolType, Shape } from '../../types/annotation';
@@ -118,37 +119,82 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => window.removeEventListener('resize', updateCanvasDimensions);
   }, [updateCanvasDimensions]);
 
-  // Reset player state and load actual first frame whenever selected asset changes
+  const [hasMediaError, setHasMediaError] = useState(false);
+  const prevAssetIdRef = useRef<string | null>(null);
+
+  // Reset player state ONLY when asset ID changes to a different video
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.load();
-      videoRef.current.currentTime = 0;
+    if (asset.id !== prevAssetIdRef.current) {
+      prevAssetIdRef.current = asset.id;
+      setHasMediaError(false);
+      if (videoRef.current) {
+        videoRef.current.load();
+        videoRef.current.currentTime = 0;
+      }
+      if (ambientVideoRef.current) {
+        ambientVideoRef.current.load();
+        ambientVideoRef.current.currentTime = 0;
+      }
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setShapes([]);
     }
-    if (ambientVideoRef.current) {
-      ambientVideoRef.current.load();
-      ambientVideoRef.current.currentTime = 0;
-    }
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setShapes([]);
   }, [asset.id, asset.url]);
 
-  // When active comment changes, jump to comment time and render vector drawings
+  // Safe media seek helper to prevent setting currentTime before metadata is ready
+  const safeSeekVideo = useCallback(
+    (targetTime: number) => {
+      const video = videoRef.current;
+      const ambient = ambientVideoRef.current;
+      if (!video) return;
+
+      const safeTime = Math.max(0, Math.min(targetTime, duration || video.duration || 0));
+
+      const applySeek = () => {
+        try {
+          video.currentTime = safeTime;
+          if (ambient && ambient.readyState >= 1) {
+            ambient.currentTime = safeTime;
+          }
+        } catch (err) {
+          console.warn('Media seek deferred until metadata loaded', err);
+        }
+      };
+
+      if (video.readyState >= 1) {
+        applySeek();
+      } else {
+        const onLoaded = () => {
+          applySeek();
+          video.removeEventListener('loadedmetadata', onLoaded);
+        };
+        video.addEventListener('loadedmetadata', onLoaded);
+      }
+    },
+    [duration]
+  );
+
+  // Jump to comment timestamp ONLY when a specific active comment is selected
+  const prevActiveCommentIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (activeComment && videoRef.current) {
-      videoRef.current.pause();
-      if (ambientVideoRef.current) ambientVideoRef.current.pause();
-      setIsPlaying(false);
-      videoRef.current.currentTime = activeComment.timeSeconds;
-      if (ambientVideoRef.current) ambientVideoRef.current.currentTime = activeComment.timeSeconds;
+    if (activeComment && activeComment.id !== prevActiveCommentIdRef.current && videoRef.current) {
+      prevActiveCommentIdRef.current = activeComment.id;
+      if (!videoRef.current.paused) {
+        videoRef.current.pause();
+        if (ambientVideoRef.current) ambientVideoRef.current.pause();
+        setIsPlaying(false);
+      }
+      safeSeekVideo(activeComment.timeSeconds);
       if (activeComment.drawingData) {
         setShapes(activeComment.drawingData.shapes);
       } else {
         setShapes([]);
       }
-      if (onTimeChange) onTimeChange(activeComment.timeSeconds);
+    } else if (!activeComment) {
+      prevActiveCommentIdRef.current = null;
     }
-  }, [activeComment, onTimeChange]);
+  }, [activeComment, safeSeekVideo]);
 
   // Video time update handler
   const handleTimeUpdate = () => {
@@ -183,6 +229,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const ambient = ambientVideoRef.current;
     if (!video) return;
 
+    if (onClearActiveComment) onClearActiveComment();
+
     if (video.paused) {
       if (ambient) ambient.currentTime = video.currentTime;
       Promise.all([
@@ -194,7 +242,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (ambient) ambient.pause();
       setIsPlaying(false);
     }
-  }, []);
+  }, [onClearActiveComment]);
 
   // Frame stepping logic (+1 / -1 / +10 / -10 frames)
   const stepFrame = useCallback((frameDelta: number) => {
@@ -216,15 +264,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Seek handler
   const handleSeek = (time: number) => {
-    const video = videoRef.current;
-    const ambient = ambientVideoRef.current;
-    if (!video) return;
-
-    const safeTime = Math.max(0, Math.min(time, duration));
-    video.currentTime = safeTime;
-    if (ambient) ambient.currentTime = safeTime;
-    setCurrentTime(safeTime);
-    if (onTimeChange) onTimeChange(safeTime);
+    safeSeekVideo(time);
+    setCurrentTime(time);
+    if (onTimeChange) onTimeChange(time);
   };
 
   // Volume & Mute handlers
@@ -347,6 +389,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             preload="metadata"
             muted
             playsInline
+            onError={(e) => {
+              (e.target as HTMLVideoElement).style.display = 'none';
+            }}
           />
         )}
 
@@ -358,6 +403,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           preload="metadata"
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
+          onError={(e) => {
+            const video = e.target as HTMLVideoElement;
+            const errCode = video.error?.code;
+
+            // Handle revoked / expired blob URLs (e.g. when opening custom uploads across browser sessions)
+            if (asset.url && asset.url.startsWith('blob:')) {
+              const fallbackUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+              console.warn('Expired blob stream URL detected. Restoring playable stream fallback:', asset.url);
+              asset.url = fallbackUrl;
+              saveStoredAsset(asset);
+              if (videoRef.current) {
+                videoRef.current.src = fallbackUrl;
+                videoRef.current.load();
+                videoRef.current.play().catch(() => {});
+              }
+              return;
+            }
+
+            if (video.src && video.readyState === 0 && (errCode === 3 || errCode === 4)) {
+              setHasMediaError(true);
+            }
+          }}
           onEnded={() => setIsPlaying(false)}
           playsInline
         />
@@ -366,6 +433,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         {watermarkText && (
           <div className="video-watermark-overlay">
             <span>{watermarkText}</span>
+          </div>
+        )}
+
+        {/* Media Stream Error Handler Overlay */}
+        {hasMediaError && (
+          <div className="media-error-overlay" style={{ position: 'absolute', zIndex: 60, background: 'rgba(0,0,0,0.85)', padding: '1rem 1.5rem', borderRadius: '8px', border: '1px solid var(--accent-rose)', textAlign: 'center' }}>
+            <p style={{ color: '#ffffff', fontSize: '0.85rem', marginBottom: '0.5rem' }}>⚠️ Video stream playback issue detected.</p>
+            <button
+              onClick={() => {
+                setHasMediaError(false);
+                if (videoRef.current) {
+                  videoRef.current.load();
+                  videoRef.current.play().catch(() => {});
+                }
+              }}
+              style={{ background: 'var(--accent-cyan)', color: '#ffffff', border: 'none', padding: '0.4rem 0.85rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
+            >
+              Reload Media Stream
+            </button>
           </div>
         )}
 

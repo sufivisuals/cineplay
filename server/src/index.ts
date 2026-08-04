@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { assetRouter } from './routes/assetRoutes';
 import { commentRouter } from './routes/commentRoutes';
 import { nleRouter } from './routes/nleRoutes';
+import { projectRouter } from './routes/projectRoutes';
 import { initSocketHub } from './realtime/socketHub';
 
 dotenv.config();
@@ -29,6 +30,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/v1/assets', assetRouter);
 app.use('/api/v1/comments', commentRouter);
 app.use('/api/v1/nle', nleRouter);
+app.use('/api/v1/projects', projectRouter);
 
 const server = http.createServer(app);
 initSocketHub(server);
