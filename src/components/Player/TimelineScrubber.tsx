@@ -11,6 +11,8 @@ interface TimelineScrubberProps {
   comments: FrameComment[];
   onSeek: (time: number) => void;
   onSelectComment: (comment: FrameComment) => void;
+  inPoint?: number | null;
+  outPoint?: number | null;
 }
 
 export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
@@ -20,6 +22,8 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
   comments,
   onSeek,
   onSelectComment,
+  inPoint = null,
+  outPoint = null,
 }) => {
   const scrubberRef = useRef<HTMLDivElement>(null);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
@@ -109,6 +113,53 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
       >
         {/* Buffered / Played Track Progress */}
         <div className="timeline-progress-fill" style={{ width: `${progressPercent}%` }} />
+
+        {/* Sleek Frame.io-Style In/Out Selection Range Overlay */}
+        {inPoint !== null && inPoint !== undefined && (
+          <div
+            className="active-inout-range-overlay"
+            style={{
+              position: 'absolute',
+              top: '1px',
+              bottom: '1px',
+              left: `${(inPoint / safeDuration) * 100}%`,
+              width: `${
+                outPoint !== null && outPoint !== undefined && outPoint > inPoint
+                  ? ((outPoint - inPoint) / safeDuration) * 100
+                  : Math.max(0.5, progressPercent - (inPoint / safeDuration) * 100)
+              }%`,
+              background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.85) 0%, rgba(56, 189, 248, 0.85) 100%)',
+              borderRadius: '3px',
+              boxShadow: '0 0 10px rgba(56, 189, 248, 0.5)',
+              zIndex: 3,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
+        {/* Existing Range Comments Visual Highlights */}
+        {comments.map((comment) => {
+          if (!comment.endTimeSeconds || comment.endTimeSeconds <= comment.timeSeconds) return null;
+          const startPct = (comment.timeSeconds / safeDuration) * 100;
+          const widthPct = ((comment.endTimeSeconds - comment.timeSeconds) / safeDuration) * 100;
+          return (
+            <div
+              key={`range-${comment.id}`}
+              className={`timeline-comment-range-bar ${comment.resolved ? 'resolved' : ''}`}
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: `${startPct}%`,
+                width: `${widthPct}%`,
+                background: comment.resolved ? 'rgba(34, 197, 94, 0.5)' : 'rgba(56, 189, 248, 0.45)',
+                borderRadius: '3px',
+                zIndex: 2,
+                pointerEvents: 'none',
+              }}
+            />
+          );
+        })}
 
         {/* Hover Time Indicator Line */}
         {hoverTime !== null && (

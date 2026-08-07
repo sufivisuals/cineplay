@@ -143,6 +143,17 @@ assetRouter.get('/:id', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    res.json({
+      asset: {
+        ...asset,
+        playUrl,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch asset', details: err.message });
+  }
+});
+
 /**
  * Register Asset Metadata in Backend Memory Store (Sync Frontend Uploads)
  */

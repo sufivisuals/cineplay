@@ -187,7 +187,7 @@ const AssetCardItem: React.FC<AssetCardItemProps> = ({
             title="Upload new version onto this stack"
           >
             <RefreshCw className="btn-ic" />
-            <span>Stack V{versionNumber + 1}</span>
+            <span>+ New Version</span>
           </button>
 
           {!isFirst && (

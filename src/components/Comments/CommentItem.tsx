@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { FrameComment } from '../../types/comment';
-import { Clock, CheckCircle2, Circle, MessageSquare, PenTool, Send, Trash2 } from 'lucide-react';
+import { Clock, CheckCircle2, Circle, MessageSquare, PenTool, Send, Trash2, Pencil } from 'lucide-react';
 
 interface CommentItemProps {
   comment: FrameComment;
@@ -9,6 +9,7 @@ interface CommentItemProps {
   onToggleResolve: (commentId: string) => void;
   onDelete: (commentId: string) => void;
   onAddReply: (commentId: string, replyText: string) => void;
+  onEdit?: (commentId: string, newText: string) => void;
 }
 
 export const CommentItem: React.FC<CommentItemProps> = ({
@@ -18,9 +19,12 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   onToggleResolve,
   onDelete,
   onAddReply,
+  onEdit,
 }) => {
   const [replyInput, setReplyInput] = useState('');
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.text);
 
   const handleReplySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +32,14 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     onAddReply(comment.id, replyInput.trim());
     setReplyInput('');
     setShowReplyForm(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editText.trim()) return;
+    if (onEdit) {
+      onEdit(comment.id, editText.trim());
+    }
+    setIsEditing(false);
   };
 
   return (
@@ -69,15 +81,58 @@ export const CommentItem: React.FC<CommentItemProps> = ({
       </div>
 
       <div className="comment-card-body">
-        <p className="comment-text">{comment.text}</p>
+        {isEditing ? (
+          <div className="comment-edit-box" onClick={(e) => e.stopPropagation()}>
+            <textarea
+              className="comment-edit-input"
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  handleSaveEdit();
+                }
+              }}
+              rows={2}
+              autoFocus
+              style={{ width: '100%', background: 'var(--bg-input, #1e293b)', color: '#ffffff', border: '1px solid var(--accent-cyan, #38bdf8)', borderRadius: '6px', padding: '0.5rem', fontSize: '0.85rem', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditText(comment.text);
+                }}
+                style={{ background: 'transparent', border: '1px solid var(--border-color, #334155)', color: '#94a3b8', borderRadius: '4px', padding: '0.25rem 0.6rem', fontSize: '0.75rem', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                style={{ background: 'linear-gradient(135deg, var(--accent-cyan) 0%, #0284c7 100%)', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.25rem 0.65rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="comment-text">{comment.text}</p>
+        )}
       </div>
 
       <div className="comment-card-footer">
         <div className="badges-group">
-          {/* Timecode Badge */}
-          <span className="timecode-badge">
+          {/* Timecode / Range Badge */}
+          <span
+            className="timecode-badge"
+            style={comment.endTimecodeFormatted ? { background: 'rgba(234, 179, 8, 0.15)', color: '#fde047', border: '1px solid rgba(234, 179, 8, 0.35)' } : undefined}
+            title={comment.endTimecodeFormatted ? `Range Comment: ${comment.timecodeFormatted} to ${comment.endTimecodeFormatted}` : `Single Point Comment: ${comment.timecodeFormatted}`}
+          >
             <Clock className="badge-icon" />
-            {comment.timecodeFormatted} (FR {comment.frameNumber})
+            {comment.endTimecodeFormatted
+              ? `${comment.timecodeFormatted} - ${comment.endTimecodeFormatted}`
+              : `${comment.timecodeFormatted} (FR ${comment.frameNumber})`}
           </span>
 
           {/* Canvas Vector Drawing Badge */}
@@ -100,6 +155,21 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             <MessageSquare className="action-icon" />
             Reply ({comment.replies.length})
           </button>
+
+          {onEdit && (
+            <button
+              className="action-link"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(!isEditing);
+                setEditText(comment.text);
+              }}
+              title="Edit comment"
+            >
+              <Pencil className="action-icon" />
+              Edit
+            </button>
+          )}
 
           <button
             className="action-link danger"

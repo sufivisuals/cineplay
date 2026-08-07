@@ -10,6 +10,7 @@ interface CommentSidebarProps {
   onSelectComment: (comment: FrameComment) => void;
   onToggleResolve: (commentId: string) => void;
   onDeleteComment: (commentId: string) => void;
+  onEditComment?: (commentId: string, newText: string) => void;
   onAddReply: (commentId: string, replyText: string) => void;
   onSubmitNewComment: (text: string) => void;
   timecodeFormatted: string;
@@ -17,6 +18,9 @@ interface CommentSidebarProps {
   hasDrawings?: boolean;
   isOpen: boolean;
   onToggleOpen: () => void;
+  inPointTimecode?: string | null;
+  outPointTimecode?: string | null;
+  onClearRange?: () => void;
 }
 
 export const CommentSidebar: React.FC<CommentSidebarProps> = ({
@@ -25,6 +29,7 @@ export const CommentSidebar: React.FC<CommentSidebarProps> = ({
   onSelectComment,
   onToggleResolve,
   onDeleteComment,
+  onEditComment,
   onAddReply,
   onSubmitNewComment,
   timecodeFormatted,
@@ -32,6 +37,9 @@ export const CommentSidebar: React.FC<CommentSidebarProps> = ({
   hasDrawings = false,
   isOpen,
   onToggleOpen,
+  inPointTimecode,
+  outPointTimecode,
+  onClearRange,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'unresolved' | 'resolved' | 'markups'>('all');
@@ -119,6 +127,7 @@ export const CommentSidebar: React.FC<CommentSidebarProps> = ({
                   onSelect={onSelectComment}
                   onToggleResolve={onToggleResolve}
                   onDelete={onDeleteComment}
+                  onEdit={onEditComment}
                   onAddReply={onAddReply}
                 />
               ))
@@ -132,6 +141,9 @@ export const CommentSidebar: React.FC<CommentSidebarProps> = ({
               frameNumber={frameNumber}
               hasDrawings={hasDrawings}
               onSubmitComment={onSubmitNewComment}
+              inPointTimecode={inPointTimecode}
+              outPointTimecode={outPointTimecode}
+              onClearRange={onClearRange}
             />
           </div>
         </div>

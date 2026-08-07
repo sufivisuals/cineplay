@@ -14,6 +14,8 @@ interface WorkspaceSidebarProps {
   onOpenTrash?: () => void;
   onNavigateDashboard?: () => void;
   currentAppMode?: 'grid' | 'player' | 'trash';
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
@@ -28,6 +30,8 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   onOpenTrash,
   onNavigateDashboard,
   currentAppMode,
+  isMobileOpen = false,
+  onCloseMobile,
 }) => {
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [isResizing, setIsResizing] = useState(false);
@@ -64,10 +68,12 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   }, [isResizing]);
 
   return (
-    <aside
-      className={`workspace-sidebar ${isResizing ? 'resizing' : ''}`}
-      style={{ width: `${sidebarWidth}px` }}
-    >
+    <>
+      {isMobileOpen && <div className="sidebar-mobile-backdrop" onClick={onCloseMobile} />}
+      <aside
+        className={`workspace-sidebar ${isResizing ? 'resizing' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}
+        style={{ width: `${sidebarWidth}px` }}
+      >
       {/* Workspace Switcher */}
       <div className="workspace-header">
         <div className="workspace-logo-icon">
@@ -122,7 +128,10 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                 <div
                   key={project.id}
                   className={`project-item ${activeProject && activeProject.id === project.id && currentAppMode !== 'trash' ? 'active' : ''}`}
-                  onClick={() => onSelectProject(project)}
+                  onClick={() => {
+                    onSelectProject(project);
+                    if (onCloseMobile) onCloseMobile();
+                  }}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flex: 1 }}>
@@ -217,5 +226,6 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
         title="Drag to resize sidebar width"
       />
     </aside>
-  );
+  </>
+);
 };

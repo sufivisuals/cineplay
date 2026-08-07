@@ -20,6 +20,7 @@ interface VideoPlayerProps {
   onClearActiveComment: () => void;
   onTimeChange?: (timeSeconds: number) => void;
   onShapesChange?: (shapes: Shape[]) => void;
+  onRangeChange?: (inPt: number | null, outPt: number | null, clearRangeFn: () => void) => void;
   watermarkText?: string;
 }
 
@@ -32,6 +33,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onClearActiveComment,
   onTimeChange,
   onShapesChange,
+  onRangeChange,
   watermarkText,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -51,6 +53,37 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [activeColor, setActiveColor] = useState('#ef4444');
   const [lineWidth, setLineWidth] = useState(4);
   const [shapes, setShapes] = useState<Shape[]>([]);
+
+  // Range-Based Comment In/Out Points (Shortcut: 'I' and 'O')
+  const [inPoint, setInPoint] = useState<number | null>(null);
+  const [outPoint, setOutPoint] = useState<number | null>(null);
+
+  const handleSetInPoint = useCallback(() => {
+    const t = currentTime;
+    setInPoint(t);
+    if (outPoint !== null && outPoint <= t) {
+      setOutPoint(null);
+    }
+  }, [currentTime, outPoint]);
+
+  const handleSetOutPoint = useCallback(() => {
+    const t = currentTime;
+    setOutPoint(t);
+    if (inPoint === null) {
+      setInPoint(Math.max(0, t - 2));
+    }
+  }, [currentTime, inPoint]);
+
+  const handleClearRange = useCallback(() => {
+    setInPoint(null);
+    setOutPoint(null);
+  }, []);
+
+  useEffect(() => {
+    if (onRangeChange) {
+      onRangeChange(inPoint, outPoint, handleClearRange);
+    }
+  }, [inPoint, outPoint, onRangeChange, handleClearRange]);
 
   // Sync shapes state up to parent App component
   useEffect(() => {
@@ -196,22 +229,48 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [activeComment, safeSeekVideo]);
 
-  // Video time update handler
+  // High-Performance 60fps Playhead Animation Loop (replaces stuttery 4-10Hz native video onTimeUpdate)
+  useEffect(() => {
+    let rafId: number | null = null;
+
+    const updatePlayhead60fps = () => {
+      const video = videoRef.current;
+      if (video && !video.paused) {
+        const time = video.currentTime;
+        setCurrentTime(time);
+        if (onTimeChange) onTimeChange(time);
+
+        // Sync ambient video background time smoothly
+        if (ambientVideoRef.current && Math.abs(ambientVideoRef.current.currentTime - time) > 0.1) {
+          ambientVideoRef.current.currentTime = time;
+        }
+
+        // Clear canvas drawings if video is playing away from active comment frame
+        if (shapes.length > 0 && !activeComment) {
+          setShapes([]);
+        }
+
+        rafId = requestAnimationFrame(updatePlayhead60fps);
+      }
+    };
+
+    if (isPlaying) {
+      rafId = requestAnimationFrame(updatePlayhead60fps);
+    }
+
+    return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [isPlaying, onTimeChange, shapes.length, activeComment]);
+
+  // Fallback video time update handler
   const handleTimeUpdate = () => {
     const video = videoRef.current;
     if (video) {
       setCurrentTime(video.currentTime);
       if (onTimeChange) onTimeChange(video.currentTime);
-
-      // Sync ambient video background time
-      if (ambientVideoRef.current && Math.abs(ambientVideoRef.current.currentTime - video.currentTime) > 0.1) {
-        ambientVideoRef.current.currentTime = video.currentTime;
-      }
-
-      // Clear drawings if video is playing and time moves away from active comment frame
-      if (isPlaying && shapes.length > 0 && !activeComment) {
-        setShapes([]);
-      }
     }
   };
 
@@ -339,12 +398,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       } else if (e.code === 'KeyL') {
         e.preventDefault();
         stepFrame(10);
+      } else if (e.code === 'KeyI') {
+        e.preventDefault();
+        handleSetInPoint();
+      } else if (e.code === 'KeyO') {
+        e.preventDefault();
+        handleSetOutPoint();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay, stepFrame]);
+  }, [togglePlay, stepFrame, handleSetInPoint, handleSetOutPoint]);
 
   const currentTc = secondsToTimecode(currentTime, fps);
 
@@ -487,6 +552,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         comments={comments}
         onSeek={handleSeek}
         onSelectComment={onSelectComment}
+        inPoint={inPoint}
+        outPoint={outPoint}
       />
 
       {/* Playback Controls Footer */}

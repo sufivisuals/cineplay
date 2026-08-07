@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { MediaAsset, AssetStatus } from './utils/sampleAssets';
 import type { FrameRate } from './types/timecode';
 import type { FrameComment } from './types/comment';
@@ -74,6 +74,10 @@ export default function App() {
   const [contextMenuState, setContextMenuState] = useState<{ x: number; y: number; asset: MediaAsset } | null>(null);
   const [fileInfoAsset, setFileInfoAsset] = useState<MediaAsset | null>(null);
   const [isDraggingGlobalFiles, setIsDraggingGlobalFiles] = useState(false);
+
+  const clearRangeRef = useRef<(() => void) | null>(null);
+  const [activeRange, setActiveRange] = useState<{ inPoint: number | null; outPoint: number | null }>({ inPoint: null, outPoint: null });
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // RBAC Client Access Control & Workspace Isolation Filtering (Scoped to active project)
   const activeAssets = assets.filter((a) => {
@@ -311,8 +315,14 @@ export default function App() {
     setContextMenuState(null);
   };
 
-  // Add new frame comment (with Guest Identity modal prompt if unauthenticated)
-  const handleAddComment = (text: string, timeSeconds: number, drawingData?: DrawingData) => {
+  // Add new frame comment (with Range support and Guest Identity modal prompt if unauthenticated)
+  const handleAddComment = (
+    text: string,
+    timeSeconds: number,
+    drawingData?: DrawingData,
+    endTimeSeconds?: number,
+    endTimecodeFormatted?: string
+  ) => {
     if (!currentAsset) return;
     if (isGuestReviewMode && !guestName) {
       setPendingComment({ text, timeSeconds, drawingData });
@@ -334,6 +344,8 @@ export default function App() {
       frameNumber: tc.totalFrames,
       timeSeconds,
       timecodeFormatted: tc.formatted,
+      endTimeSeconds,
+      endTimecodeFormatted,
       fps,
       text,
       resolved: false,
@@ -356,6 +368,20 @@ export default function App() {
     if (pendingComment) {
       handleAddComment(pendingComment.text, pendingComment.timeSeconds, pendingComment.drawingData);
       setPendingComment(null);
+    }
+  };
+
+  // Edit existing comment
+  const handleEditComment = (commentId: string, newText: string) => {
+    const updated = comments.map((c) => (c.id === commentId ? { ...c, text: newText } : c));
+    setComments(updated);
+    if (currentAsset) {
+      saveStoredComments(currentAsset.id, updated);
+      fetch(`http://localhost:4000/api/v1/comments/${commentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newText }),
+      }).catch(() => {});
     }
   };
 
@@ -486,6 +512,7 @@ export default function App() {
         currentUser={currentUser}
         onChangeUser={setCurrentUser}
         isGuestReviewMode={isGuestReviewMode}
+        onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
       />
 
       {/* Main 3-Column Workspace Layout */}
@@ -509,6 +536,8 @@ export default function App() {
             onOpenTrash={() => setAppMode('trash')}
             onNavigateDashboard={() => setAppMode('grid')}
             currentAppMode={appMode}
+            isMobileOpen={isMobileSidebarOpen}
+            onCloseMobile={() => setIsMobileSidebarOpen(false)}
           />
         )}
 
@@ -555,6 +584,10 @@ export default function App() {
               onClearActiveComment={() => setActiveComment(null)}
               onTimeChange={(t) => setLiveCurrentTime(t)}
               onShapesChange={(s) => setActiveShapes(s)}
+              onRangeChange={(inPt, outPt, clearFn) => {
+                setActiveRange({ inPoint: inPt, outPoint: outPt });
+                clearRangeRef.current = clearFn;
+              }}
               watermarkText={watermarkText}
             />
 
@@ -571,19 +604,35 @@ export default function App() {
                 setComments(updated);
                 if (currentAsset) saveStoredComments(currentAsset.id, updated);
               }}
+              onEditComment={handleEditComment}
               onAddReply={handleAddReply}
-              onSubmitNewComment={(text) =>
+              onSubmitNewComment={(text) => {
+                const commentTime = activeRange.inPoint !== null ? activeRange.inPoint : liveCurrentTime;
+                const commentEndTime = activeRange.outPoint !== null && activeRange.outPoint > commentTime ? activeRange.outPoint : undefined;
+                const commentEndTimecode = commentEndTime !== undefined ? secondsToTimecode(commentEndTime, fps).formatted : undefined;
+
                 handleAddComment(
                   text,
-                  liveCurrentTime,
+                  commentTime,
                   activeShapes.length > 0
                     ? { version: '1.0', canvasWidth: 1280, canvasHeight: 720, shapes: activeShapes }
-                    : undefined
-                )
-              }
+                    : undefined,
+                  commentEndTime,
+                  commentEndTimecode
+                );
+
+                if (clearRangeRef.current) clearRangeRef.current();
+                setActiveRange({ inPoint: null, outPoint: null });
+              }}
               timecodeFormatted={secondsToTimecode(activeTimeSeconds, fps).formatted}
               frameNumber={secondsToTimecode(activeTimeSeconds, fps).totalFrames}
               hasDrawings={activeShapes.length > 0}
+              inPointTimecode={activeRange.inPoint !== null ? secondsToTimecode(activeRange.inPoint, fps).formatted : null}
+              outPointTimecode={activeRange.outPoint !== null ? secondsToTimecode(activeRange.outPoint, fps).formatted : null}
+              onClearRange={() => {
+                if (clearRangeRef.current) clearRangeRef.current();
+                setActiveRange({ inPoint: null, outPoint: null });
+              }}
             />
           </div>
         )}

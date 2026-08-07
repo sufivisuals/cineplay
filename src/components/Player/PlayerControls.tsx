@@ -34,6 +34,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   onToggleMute,
   onToggleFullscreen,
 }) => {
+
   return (
     <div className="player-controls-bar">
       <div className="controls-left">

@@ -64,6 +64,31 @@ commentRouter.patch('/:commentId/resolve', (req: Request, res: Response): void =
 });
 
 /**
+ * Update/Edit comment text or range timestamps.
+ */
+commentRouter.patch('/:commentId', (req: Request, res: Response): void => {
+  const { commentId } = req.params;
+  const { text, endTimeSeconds, endTimecodeFormatted } = req.body;
+  let targetComment: any = null;
+
+  for (const [assetId, list] of memoryCommentStore.entries()) {
+    const updated = list.map((c) => {
+      if (c.id === commentId) {
+        if (text !== undefined) c.text = text;
+        if (endTimeSeconds !== undefined) c.endTimeSeconds = endTimeSeconds;
+        if (endTimecodeFormatted !== undefined) c.endTimecodeFormatted = endTimecodeFormatted;
+        c.updatedAt = new Date().toISOString();
+        targetComment = c;
+      }
+      return c;
+    });
+    memoryCommentStore.set(assetId, updated);
+  }
+
+  res.json({ success: true, comment: targetComment });
+});
+
+/**
  * Delete a comment with Guest permission security check.
  */
 commentRouter.delete('/:commentId', (req: Request, res: Response): void => {

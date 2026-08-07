@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import type { MediaAsset } from '../../utils/sampleAssets';
 import type { FrameRate } from '../../types/timecode';
 import { PRESET_USERS, type UserProfile } from '../../types/auth';
-import { Film, Upload, Clock, CheckCircle2, Share2, ChevronRight, Layers, ShieldCheck, UserCheck } from 'lucide-react';
+import { Film, Upload, Clock, CheckCircle2, Share2, ChevronRight, Layers, ShieldCheck, UserCheck, Menu } from 'lucide-react';
 import { ShareModal } from '../Sharing/ShareModal';
 
 interface HeaderProps {
@@ -20,6 +20,7 @@ interface HeaderProps {
   currentUser: UserProfile;
   onChangeUser: (user: UserProfile) => void;
   isGuestReviewMode?: boolean;
+  onToggleMobileSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onChangeUser,
   isGuestReviewMode = false,
+  onToggleMobileSidebar,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLocalShareOpen, setIsLocalShareOpen] = useState(false);
@@ -60,14 +62,29 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="header-bar">
       <div className="header-brand">
+        {onToggleMobileSidebar && (
+          <button
+            className="btn-mobile-hamburger"
+            onClick={onToggleMobileSidebar}
+            title="Toggle Sidebar Menu"
+          >
+            <Menu className="hamburger-icon" />
+          </button>
+        )}
+
         <div className="brand-logo" onClick={onNavigateGrid} style={{ cursor: 'pointer' }}>
           <Film className="brand-icon" />
           <span className="brand-title">CINEPLAY</span>
-          <span className="brand-tag">PRO</span>
+          <span className="brand-tag hide-on-mobile">PRO</span>
         </div>
 
-        {/* Frame.io-Inspired Breadcrumb Trail */}
-        <nav className="header-breadcrumbs">
+        {/* Mobile Single Truncated Title Display */}
+        <div className="mobile-header-title" onClick={onNavigateGrid} title={currentAsset ? currentAsset.title : projectName}>
+          {currentAsset ? currentAsset.title : projectName}
+        </div>
+
+        {/* Frame.io-Inspired Breadcrumb Trail (Desktop Only) */}
+        <nav className="header-breadcrumbs hide-on-mobile">
           <span className="bc-item workspace">{workspaceName}</span>
           <ChevronRight className="bc-sep" />
           <span
@@ -105,9 +122,9 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header-meta">
-        {/* Role & Client Isolation Switcher (Hidden in Guest Review Mode for Privacy) */}
+        {/* Role & Client Isolation Switcher (Hidden in Guest Review Mode & Mobile for Clean UI) */}
         {!isGuestReviewMode && (
-          <div className="user-role-switcher" title="Simulate Client View / RBAC Permissions">
+          <div className="user-role-switcher hide-on-mobile" title="Simulate Client View / RBAC Permissions">
             {currentUser.role === 'admin' ? (
               <ShieldCheck className="role-icon admin" />
             ) : (
@@ -130,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-        <div className="fps-selector">
+        <div className="fps-selector hide-on-mobile">
           <Clock className="meta-icon" />
           <span className="meta-label">Timebase:</span>
           <select
@@ -149,12 +166,12 @@ export const Header: React.FC<HeaderProps> = ({
           </select>
         </div>
 
-        <div className="badge-stat">
+        <div className="badge-stat hide-on-mobile">
           <Layers className="stat-icon" />
           <span>{commentCount} Notes</span>
         </div>
 
-        <div className="badge-stat success">
+        <div className="badge-stat success hide-on-mobile">
           <CheckCircle2 className="stat-icon" />
           <span>Sync Active</span>
         </div>
@@ -171,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {currentUser.role === 'admin' && (
           <button
-            className="btn-upload"
+            className="btn-upload hide-on-mobile"
             onClick={() => fileInputRef.current?.click()}
             title="Upload local video file from your disk"
           >

@@ -16,6 +16,8 @@ export interface FrameComment {
   frameNumber: number;
   timeSeconds: number;
   timecodeFormatted: string; // "HH:MM:SS:FF"
+  endTimeSeconds?: number;
+  endTimecodeFormatted?: string; // "HH:MM:SS:FF"
   fps: number;
   text: string;
   drawingData?: DrawingData;
